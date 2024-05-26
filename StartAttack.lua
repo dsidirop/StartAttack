@@ -2,69 +2,82 @@ SLASH_FINDATTACK1 = "/findattack"
 SLASH_STARTATTACK1 = "/startattack"
 SLASH_STOPATTACK1 = "/stopattack"
 
-local scantip = CreateFrame("GameTooltip", "scantip", nil, "GameTooltipTemplate")
-scantip:SetOwner(WorldFrame, "ANCHOR_NONE")
-
-local AtkSpell
-
-local function print(text, name, r, g, b, frame, delay)
-	if not text or string.len(text) == 0 then
-		text = " "
-	end
-	if not name or name == AceConsole then
-		(frame or DEFAULT_CHAT_FRAME):AddMessage(text, r, g, b, nil, delay or 5)
-	else
-		(frame or DEFAULT_CHAT_FRAME):AddMessage("|cffffff78" .. tostring(name) .. ":|r " .. text, r, g, b, nil, delay or 5)
-	end
+local printImpl = _G.print or function(text) --pfui has its own global print function so we can use that one
+    DEFAULT_CHAT_FRAME:AddMessage(text)
 end
 
-local function findAttackSpell()
-	for AtkSlot = 12,72 do
-		if IsAttackAction(AtkSlot) then
-			AtkSpell = AtkSlot
-		end
-	end
+local function print(msg)
+    printImpl("[StartAttack] " .. msg)
 end
 
-local function startAttack()
-	if not IsCurrentAction(AtkSpell) then
-		UseAction(AtkSpell)
-	end
+local _cachedAttackSpellActionbarSlot
+local function findAttackSpellAndCacheIt()
+    if _cachedAttackSpellActionbarSlot ~= nil then
+        return _cachedAttackSpellActionbarSlot
+    end
+
+    for slot = 1, 120 do
+        if IsAttackAction(slot) then
+            _cachedAttackSpellActionbarSlot = slot
+            return _cachedAttackSpellActionbarSlot
+        end
+    end
+
+    return nil
 end
 
-local function stopAttack()
-	if IsCurrentAction(AtkSpell) then
-		UseAction(AtkSpell)
-	end
+local function startAttackImpl()
+    if IsCurrentAction(_cachedAttackSpellActionbarSlot) then
+        return
+    end
+
+    UseAction(_cachedAttackSpellActionbarSlot)
 end
 
-local startAttackFn = function()
-	findAttackSpell()
-	startAttack()
-	startAttackFn = startAttack
+local function stopAttackImpl()
+    if not IsCurrentAction(_cachedAttackSpellActionbarSlot) then
+        return
+    end
+
+    UseAction(_cachedAttackSpellActionbarSlot)
 end
 
-local stopAttackFn = function()
-	findAttackSpell()
-	stopAttack()
-	stopAttackFn = stopAttack
+local findTheAttackSpellOnlyOnce_thenStartAttack = function()
+    local found = findAttackSpellAndCacheIt() ~= nil
+    if not found then
+        print("Attack-spell not found in any of the actionbars!")
+        return
+    end
+
+    startAttackImpl()
+    findTheAttackSpellOnlyOnce_thenStartAttack = startAttackImpl
 end
 
-function SlashCmdList.FINDATTACK(msg, editbox)
-	-- TODO: Run this when the character loads
-	findAttackSpell()
-	if AtkSpell == nil then
-		print("Attack skill not found")
-	else
-		print("found Attack skill at ".. tostring(AtkSpell))
-	end
+local findTheAttackSpellOnlyOnce_thenStopAttack = function()
+    local found = findAttackSpellAndCacheIt() ~= nil
+    if not found then
+        print("Attack-spell not found in any of the actionbars!")
+        return
+    end
+
+    stopAttackImpl()
+    findTheAttackSpellOnlyOnce_thenStopAttack = stopAttackImpl
 end
 
-function SlashCmdList.STARTATTACK(msg, editbox)
-	startAttackFn()
+function SlashCmdList.FINDATTACK()
+    local attackSpell = findAttackSpellAndCacheIt()
+    if attackSpell == nil then
+        print("Attack-spell not found in any of the actionbars!")
+        return
+    end
+
+    print("Found attack-spell at " .. tostring(attackSpell))
 end
 
-function SlashCmdList.STOPATTACK(msg, editbox)
-	stopAttackFn()
+function SlashCmdList.STARTATTACK()
+    findTheAttackSpellOnlyOnce_thenStartAttack()
 end
 
+function SlashCmdList.STOPATTACK()
+    findTheAttackSpellOnlyOnce_thenStopAttack()
+end
