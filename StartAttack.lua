@@ -7,7 +7,7 @@ local printImpl = _G.print or function(text) --pfui has its own global print fun
 end
 
 local function print(msg)
-    printImpl("[StartAttack] " .. msg)
+    printImpl("|cffFFC125[StartAttack] " .. msg)
 end
 
 local _cachedAttackSpellActionbarSlot
@@ -29,6 +29,15 @@ end
 local function startAttackImpl()
     if IsCurrentAction(_cachedAttackSpellActionbarSlot) then
         return
+    end
+    
+    if not IsAttackAction(_cachedAttackSpellActionbarSlot) then -- attack spell was moved or removed from the actionbar
+        _cachedAttackSpellActionbarSlot = nil -- invalidate cache
+        _cachedAttackSpellActionbarSlot = findAttackSpellAndCacheIt()
+        if _cachedAttackSpellActionbarSlot == nil then
+            print("Attack-spell not found in any of the actionbars! Did you move it?")
+            return
+        end
     end
 
     UseAction(_cachedAttackSpellActionbarSlot)
