@@ -26,21 +26,40 @@ local function findAttackSpellAndCacheIt()
     return nil
 end
 
+local function isCurrentTargetAliveAndHostile()
+    return UnitExists("target")
+            and not UnitIsDeadOrGhost("target")
+            and not UnitIsFriend("player", "target")
+end
+
+local function tryRelocateAttackSpellAndCacheIt()
+    _cachedAttackSpellActionbarSlot = nil -- invalidate cache
+
+    return findAttackSpellAndCacheIt() ~= nil
+end
+
 local function startAttackImpl()
     if IsCurrentAction(_cachedAttackSpellActionbarSlot) then
         return
     end
     
-    if not IsAttackAction(_cachedAttackSpellActionbarSlot) then -- attack spell was moved or removed from the actionbar
-        _cachedAttackSpellActionbarSlot = nil -- invalidate cache
-        _cachedAttackSpellActionbarSlot = findAttackSpellAndCacheIt()
-        if _cachedAttackSpellActionbarSlot == nil then
-            print("Attack-spell not found in any of the actionbars! Did you move it?")
+    if not IsAttackAction(_cachedAttackSpellActionbarSlot) and not tryRelocateAttackSpellAndCacheIt() then
+        print("Attack-spell not found in any of the actionbars! Did you remove it completely from them?")
+        return
+    end
+
+    if not isCurrentTargetAliveAndHostile() then
+        TargetNearestEnemy() -- 00 workaround
+        if not isCurrentTargetAliveAndHostile() then
+            -- no alive hostile targets left around
             return
         end
     end
 
     UseAction(_cachedAttackSpellActionbarSlot)
+    
+    -- 00 after killing a hostile target the default logic of start-attack has trouble picking the next hostile target laying around
+    --    by doing the targeting ourselves this problem is solved 
 end
 
 local function stopAttackImpl()
