@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: StartAttack
 ## Notes: Bringing /startattack to Vanilla WoW
-## Author: Khutulun
+## Author: Dsidirop (original by: Khutulun)
 
 StartAttack.lua
