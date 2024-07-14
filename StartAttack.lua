@@ -2,7 +2,7 @@ SLASH_FINDATTACK1 = "/findattack"
 SLASH_STARTATTACK1 = "/startattack"
 SLASH_STOPATTACK1 = "/stopattack"
 
-local printImpl = _G.print or function(text) --pfui has its own global print function so we can use that one
+local printImpl = print or function(text) --pfui has its own global print function so we can use that one
     DEFAULT_CHAT_FRAME:AddMessage(text)
 end
 
